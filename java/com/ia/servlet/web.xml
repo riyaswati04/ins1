@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<web-app>
+
+	<!-- General description of your web application -->
+	<display-name>Insights Assist Server</display-name>
+	<description>
+		Version 1.0 of Insights Assist Server
+	</description>
+
+	<!-- This filter intercepts all requests to handle url rewrites, if any. -->
+	<filter>
+		<filter-name>UrlRewriteFilter</filter-name>
+		<filter-class>org.tuckey.web.filters.urlrewrite.UrlRewriteFilter</filter-class>
+	</filter>
+	
+	<filter-mapping>
+		<filter-name>UrlRewriteFilter</filter-name>
+		<url-pattern>/*</url-pattern>
+		<dispatcher>REQUEST</dispatcher>
+	</filter-mapping>
+
+	<!-- This filter intercepts all requests to the ia servlet and logs them. -->
+	<filter>
+		<filter-name>LoggingFilter</filter-name>
+		<filter-class>com.ia.servlet.RequestLogger</filter-class>
+	</filter>
+	<filter-mapping>
+		<filter-name>LoggingFilter</filter-name>
+		<url-pattern>/ia/*</url-pattern>
+		<dispatcher>REQUEST</dispatcher>
+		<dispatcher>FORWARD</dispatcher>
+	</filter-mapping>
+
+	<!-- This filter intercepts all requests to the ia servlet and rejects those 
+		which contain %0d or %0a in parameters that are reflected in the Response 
+		. -->
+	<filter>
+		<filter-name>ResponseSecurityFilter</filter-name>
+		<filter-class>com.ia.servlet.ResponseSecurityFilter</filter-class>
+	</filter>
+	<filter-mapping>
+		<filter-name>ResponseSecurityFilter</filter-name>
+		<url-pattern>/ia/*</url-pattern>
+		<dispatcher>REQUEST</dispatcher>
+		<dispatcher>FORWARD</dispatcher>
+	</filter-mapping>
+
+	<!-- This filter verifies that an organisation is allowed to access an action -->
+	<filter>
+		<filter-name>VerifyPermissions</filter-name>
+		<filter-class>com.ia.servlet.VerifyPermissions</filter-class>
+	</filter>
+	<filter-mapping>
+		<filter-name>VerifyPermissions</filter-name>
+		<url-pattern>/ia/*</url-pattern>
+		<dispatcher>REQUEST</dispatcher>
+		<dispatcher>FORWARD</dispatcher>
+	</filter-mapping>
+
+	<!-- This filter verifies that the request to an action has originated from 
+		an expected remote address -->
+	<filter>
+		<filter-name>VerifyRemoteAddress</filter-name>
+		<filter-class>com.ia.servlet.VerifyRemoteAddress</filter-class>
+	</filter>
+	<filter-mapping>
+		<filter-name>VerifyRemoteAddress</filter-name>
+		<url-pattern>/ia/*</url-pattern>
+		<dispatcher>REQUEST</dispatcher>
+		<dispatcher>FORWARD</dispatcher>
+	</filter-mapping>
+
+	<servlet>
+		<servlet-name>IAServer</servlet-name>
+		<description>
+			Version 1.0 of Insights Assist Server
+		</description>
+		<servlet-class>com.ia.servlet.IAServer</servlet-class>
+		<load-on-startup>1</load-on-startup>
+	</servlet>
+
+	<servlet-mapping>
+		<servlet-name>IAServer</servlet-name>
+		<url-pattern>/ia/*</url-pattern>
+	</servlet-mapping>
+
+	<!-- Define the default session timeout for your application, in minutes. 
+		From a servlet or JSP page, you can modify the timeout for a particular session 
+		dynamically by using HttpSession.getMaxInactiveInterval(). -->
+
+	<session-config>
+		<session-timeout>60</session-timeout>    <!-- 1 hour -->
+	</session-config>
+
+	<!-- listener class -->
+
+	<!-- BEGIN GUICE -->
+	<listener>
+		<listener-class>com.ia.core.BootstrapContextListener</listener-class>
+	</listener>
+	<!-- END GUICE -->
+
+	<!--<listener> <listener-class>com.ia.core.CoreServicesListener</listener-class> 
+		</listener> -->
+
+	<listener>
+		<listener-class>com.ia.servlet.IAServicesListener</listener-class>
+	</listener>
+
+
+</web-app>
+    
+

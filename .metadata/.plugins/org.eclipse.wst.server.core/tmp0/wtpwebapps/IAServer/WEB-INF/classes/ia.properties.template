@@ -1,0 +1,41 @@
+# Set this to false in the production system unless stack trace is required
+servlet.debug=true
+# Set this to true in the production system
+production.system=false
+
+# The password used to encrypt/decrypt Perl scripts
+crypt.passPhrase=>7perfios17%g
+crypt.rsa.pem.pass=falcon123
+
+log.file=ia.log
+log.dir=/home/swati/perfios/logs/ia-logs
+perl.command=/usr/bin/perl
+python.command=/usr/bin/python
+bash.command=/bin/bash
+tempFiles.rootDir=/home/swati/perfios/logs/ia-logs
+auth.key=123AGH796
+template.base.dir=.metadata/.plugins/org.eclipse.wst.server.core/tmp0/wtpwebapps/
+
+# Email properties
+email.refresh.token=
+machine.name=swati-Lenovo-ideapad-500S-14ISK
+support.email.id=riyaswati04@gmail.com
+
+# The Secret Key used to encrypt/decrypt text
+crypt.secret.key=falcon123
+
+# Following mysql parameters are for unit testing and key generation
+# Avoid during deployment
+ia.db.user=root
+ia.db.password=admin
+ia.db.driver=com.mysql.jdbc.Driver
+ia.db.url=jdbc:mysql://localhost:3306/plp?zeroDateTimeBehavior=convertToNull&allowMultiQueries=true
+
+#Urls for demo
+
+ia.generate.insights = https://demo.perfios.com/KuberaVault/insights/api/transaction/request
+ia.transaction.status = https://demo.perfios.com/KuberaVault/insights/txnstatus
+ia.transaction.callback.url = http://demo.perfios.com/IAServer/ia/api/v1/completedReport
+return.url = https://demo.perfios.com/ia/return.html?id=
+ia.retrieve.report = https://demo.perfios.com/KuberaVault/insights/retrieve
+ia.get.institutions = https://demo.perfios.com/KuberaVault/insights/institutions

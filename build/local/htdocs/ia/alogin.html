@@ -1,0 +1,117 @@
+<!--Author: W3layouts
+Author URL: http://w3layouts.com
+License: Creative Commons Attribution 3.0 Unported
+License URL: http://creativecommons.org/licenses/by/3.0/
+-->
+<!DOCTYPE HTML>
+<html lang="zxx">
+
+<head>
+	<title>Admin Login</title>
+	<!-- Meta tag Keywords -->
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content="Portrait Login Form Responsive Widget,Login form widgets, Sign up Web forms , Login signup Responsive web form,Flat Pricing table,Flat Drop downs,Registration Forms,News letter Forms,Elements"
+	/>
+	<script>
+		addEventListener("load", function () {
+			setTimeout(hideURLbar, 0);
+		}, false);
+
+		function hideURLbar() {
+			window.scrollTo(0, 1);
+		}
+	</script>
+	<!-- Meta tag Keywords -->
+	<!-- css files -->
+	<link rel="stylesheet" href="dist/css/style.css" type="text/css" media="all" />
+	<!-- Style-CSS -->
+	<link rel="stylesheet" href="dist/css/font-awesome.css" type="text/css"/>
+	<!-- Font-Awesome-Icons-CSS -->
+	<!-- //css files -->
+	<!-- online-fonts -->
+	<link href="//fonts.googleapis.com/css?family=Tangerine:400,700" rel="stylesheet">
+	<link href="//fonts.googleapis.com/css?family=Open+Sans:300,300i,400,400i,600,600i,700,700i,800,800i" rel="stylesheet">
+	<!-- //online-fonts -->
+</head>
+
+<body>
+	<!--header-->
+	<div class="header-w3l">
+		<h1>
+			<span style="color:#006680">A</span>dmin
+			<span style="color:#006680">L</span>ogin
+		</div>
+	<!--//header-->
+	<div class="main-content-agile">
+		<div class="sub-main-w3">
+	         <img src="img/admin.png" alt="" class="img-thumbnail img-responsive" style="padding:5px"/>
+				   <h2>Admin</h2>
+			<form accept-charset="utf-8" id="form">
+				<div class="pom-agile">
+					<span class="fa fa-user-o" aria-hidden="true"></span>
+					<input placeholder="Username" id="email" name="username" class="user" type="text" required="">
+				</div>
+				<div class="pom-agile">
+					<span class="fa fa-key" aria-hidden="true"></span>
+					<input placeholder="Password" name="userpass" id="pwd" class="pass" type="password" required="">
+				</div>
+
+
+
+				<div class="right-w3l">
+					<input type="submit" value="Login" onclick="javascript:submitForm(); return false;">
+				</div>
+
+			</form>
+		</div>
+	</div>
+	<!--//main-->
+	<!--footer-->
+	<div class="footer">
+		<p>&copy; 2018 Perfios
+
+		</p>
+	</div>
+	<!--//footer-->
+	<script src="plugins/jQuery/jquery-2.2.3.min.js"></script>
+<!-- Bootstrap 3.3.6 -->
+<script src="bootstrap/js/bootstrap.min.js"></script>
+<script>
+
+   function submitForm() {
+      var username = document.getElementById("email").value;
+      var password = document.getElementById("pwd").value;
+      var form=$("#form");
+      if(username && username.length>0 && password && password.length>0){
+        var data=$(form).serialize();
+          //var json = JSON.stringify(data);
+          $.ajax({
+             url : '/IAServer/ia/api/v1/alogin',
+             method :"POST",
+             data : data,
+             datatype:'json',
+             success : function(response){
+              console.log("login --> ", response);
+             if(response.success == true){
+                window.location.href="dashboard.html";
+             }else{
+               alert(response.message);
+             }
+        	 },
+        	 error : function(e){
+             alert("Something went wrong, try later");
+        	 }
+          });
+
+      }else{
+        alert("Please enter credentials");
+      }
+  }
+
+
+</script>
+
+</body>
+
+</html>

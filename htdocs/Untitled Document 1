@@ -1,0 +1,10 @@
+<div class="form-group">
+				                              <label>Confirm Password</label>
+				                     <div>
+					                                <div class="input-group">
+						                                  <span class="input-group-addon"><i class="fa fa-lock fa-lg" aria-hidden="true"></i></span>
+						                                  <input type="password" class="form-control" name="confirm" id="confirm"  placeholder="Confirm your Password"/>
+					                                </div>
+				                     </div>
+			                       </div>
+

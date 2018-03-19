@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Insights-Assist|Log-in</title>
+  <link rel="shortcut icon" type="image/png" href="img/layout/ia.png"/>
+  <!-- Tell the browser to be responsive to screen width -->
+  <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+  <!-- Bootstrap 3.3.6 -->
+  <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="plugins/font-awesome-4.7.0/css/font-awesome.min.css">
+  <!-- Ionicons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ionicons/2.0.1/css/ionicons.min.css">
+  <!-- Theme style -->
+  <link rel="stylesheet" href="dist/css/AdminLTE.min.css">
+
+  <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+  <!--[if lt IE 9]>
+  <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+  <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+  <![endif]-->
+
+  <style>
+    html, body {
+      height: 90% !important;
+    }
+  </style>
+</head>
+<body class="hold-transition login-page">
+<div class="login-box" style="padding-top:6% !important;">
+  <div class="login-logo">
+    <img src="/ia/img/layout/perfios_logo.jpg" style="text-align: left; float: left" />  <a href="https://www.perfios.com/" target="_blank">Insights-Assists</a>
+  </div>
+  <div class="login-box-body">
+    <img src="/ia/img/layout/ia.png" width="40" height="40" style="text-align: left; float: left" /> <p style="padding-top:2% !important;" class="login-box-msg">Sign in to start your session..!</p>
+    <!-- <br/> -->
+    <form id="loginForm">
+      <div class="form-group has-feedback">
+        <input id="username" name="username" type="email" class="form-control" placeholder="Email" required>
+        <span class="glyphicon glyphicon-envelope form-control-feedback"></span>
+      </div>
+      <div class="form-group has-feedback">
+        <input id="password" name="password" type="password" class="form-control" placeholder="Password" required>
+        <span class="glyphicon glyphicon-lock form-control-feedback"></span>
+      </div>
+      <input type="hidden" id="organisation" name="organisation" value="acme">
+      <input type="hidden" id="type" name="type" value="IA">
+      <input type="hidden" id="json" name="json" value="">
+      <div class="row">
+        <div class="col-xs-12">
+          <button type="submit" class="btn btn-primary btn-block btn-flat" onclick="javascript:submitForm(); return false;">Sign In</button>
+        </div>
+      </div>
+      <br/>
+      <div class="row">
+        <center><strong>Copyright &copy; 2017 <a href="https://www.perfios.com/" target="_blank">Perfios Software Solutions Pvt Ltd</a>.</strong></center>
+      </div>
+    </form>
+
+  </div>
+  <!-- /.login-box-body -->
+  <div class="login-logo">
+    <!-- <img src="/kyc/img/layout/perfios_logo.jpg" style="text-align: left; float: left" /> -->
+  </div>
+</div>
+<!-- /.login-box -->
+
+<!-- jQuery 2.2.3 -->
+<script src="plugins/jQuery/jquery-2.2.3.min.js"></script>
+<!-- Bootstrap 3.3.6 -->
+<script src="bootstrap/js/bootstrap.min.js"></script>
+<script>
+
+  function submitForm() {
+      var username = document.getElementById("username").value;
+      var password = document.getElementById("password").value;
+      if(username && username.length>0 && password && password.length>0){
+
+          var data = {
+              "username" : username,
+              "organisation" : document.getElementById("organisation").value,
+              "type" : document.getElementById("type").value,
+              "password" : password
+          };
+          var json = JSON.stringify(data);
+          $("#json").val(json);
+          $("#json").text(json);
+
+          $.ajax({
+             url : '/IAServer/ia/api/v1/login',
+             method :"post",
+             dataType : "json",
+             data : {
+                 "json" : json,
+                 "organisation" : 'acme'
+             },
+             success : function(response){
+                //  console.log("login --> ", response);
+             if(response.success){
+                window.location.href="loanMgmt.html";
+             }else{
+               alert(response.message);
+             }
+        	 },
+        	 error : function(e){
+             alert("Something went wrong, try later");
+        	 }
+          });
+
+      }else{
+        alert("Please enter credentials");
+      }
+  }
+
+</script>
+</body>
+</html>

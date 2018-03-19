@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="KuberaUtils" xmlns:c="antlib:it.haefelinger.flaka">
+   
+    <!-- This macro checks if an executable is available in the system PATH. -->
+    <macrodef name="assertAvailability">
+        <attribute name="executable" />
+        <attribute name="args" default="--version" />
+        <sequential>
+            <echo message="Checking if @{executable} is available." />
+            <exec executable="@{executable}" failonerror="true" outputproperty="version.@{executable}">
+                <arg value="@{args}" />
+            </exec>
+        </sequential>
+    </macrodef>
+
+    <!-- Parametrised macro to encrypt Perl and R scripts -->
+    <macrodef name="encryptScripts">
+        <!-- Scripts to encrypt will be read from this directory. -->
+        <attribute name="srcdir" />
+
+        <!-- Encrypted scripts will be saved to this directory. -->
+        <attribute name="destdir" />
+
+        <!-- File extension: *.pl, *.r etc. -->
+        <attribute name="ext" />
+
+        <!-- Scripts to exclude, if any. -->
+        <attribute name="exclude" default="" />
+
+        <!-- Explanation:
+            Step 1: List all files with matching extension in the source directory.
+                    We use <fileset> to match all files with the given extension
+                    to do this. Only files that were modified after the correspoding
+                    encrypted file was last generated will be listed.
+
+            Step 2: Read the path of each file in the list into a variable named "in".
+
+            Step 3: Derive the name of the file to save the output of CryptHandler
+                    by removing the filename extension from the basename of the file.
+                    (For e.g. /foo/bar/YesBankFetch.pl would become YesBankFetch)
+                    Save this in a variable named "out".
+
+            Step 4: For each file in list call <java> task to execute CryptHandler and
+                    pass "in" and "out" as first and second arguments respectively.
+        -->
+        <sequential>
+            <property name="regexp.script" value=".*[\\|/](.*)\..*$" />
+
+            <for param="in">
+                <path>
+                    <fileset dir="@{srcdir}" includes="@{ext}">
+                        <depend targetdir="@{destdir}">
+                            <mapper type="glob" from="@{ext}" to="*" />
+                        </depend>
+                        <exclude name="@{exclude}" />
+                    </fileset>
+                </path>
+                <sequential>
+                    <propertyregex override="yes" property="out" input="@{in}" regexp="${regexp.script}" select="\1" />
+                    <java classname="com.ia.crypto.CryptHandler" classpathref="classpath.build" failonerror="true">
+                        <arg value="@{in}" />
+                        <arg value="@{destdir}/${out}" />
+                    </java>
+                </sequential>
+            </for>
+        </sequential>
+    </macrodef>
+
+    <!-- This macro copies files with a specific extension from one location to another
+        while ignoring CVS directories, Makefiles and *Test* files. -->
+    <macrodef name="copyFiles">
+        <attribute name="fromdir" />
+        <attribute name="todir" />
+        <attribute name="ext" default="*" />
+        <sequential>
+            <for list="@{ext}" param="extension">
+                <sequential>
+                    <copy todir="@{todir}">
+                        <fileset dir="@{fromdir}">
+                            <include name="**/@{extension}" />
+                            <exclude name="**/*Makefile*" />
+                            <exclude name="**/*Test*@{extension}" />
+                            <exclude name="**/Mock*@{extension}" />
+                            <!-- Don't copy scripts if present -->
+                            <exclude name="${build.scripts.dir}" />
+                            <exclude name="**/.cvsignore" />
+                        </fileset>
+                        <fileset dir="@{fromdir}">
+                            <include name="**/TestFwk*@{extension}" />
+                        </fileset>
+                    </copy>
+                </sequential>
+            </for>
+        </sequential>
+    </macrodef>
+
+    <!-- Parametrised macro to delete encrypted Perl and R scripts -->
+    <macrodef name="deleteEncryptedScripts">
+        <attribute name="destdir" />
+        <attribute name="srcdir" />
+        <!-- Filename extension: *.pl, *.r etc. -->
+        <attribute name="ext" />
+        <sequential>
+            <if>
+                <available file="@{destdir}" type="dir" />
+                <then>
+                    <!-- Delete only those encrypted files that have a corresponding
+                    *.pl or *.r file in Perl or R source directory respectively. -->
+                    <delete>
+                        <fileset dir="@{destdir}">
+                            <include name="**/*" />
+
+                            <present targetdir="@{srcdir}">
+                                <mapper type="glob" from="*" to="@{ext}" />
+                            </present>
+                        </fileset>
+                    </delete>
+                </then>
+            </if>
+        </sequential>
+    </macrodef>
+</project>

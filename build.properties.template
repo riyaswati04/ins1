@@ -1,0 +1,24 @@
+#-------------------------------------------------------------------------
+# Edit properties in this section to customize build for local machine.
+# Use / as path separator in case of Windows. Escape spaces with \
+# For e.g. C:/Program\ Files/Apache\ Group/Apache2/htdocs
+#-------------------------------------------------------------------------
+# Tomcat root directory.
+# Windows equivalent would be something like C:/apache-tomcat-6.0.16
+tomcat.base.dir=/perfios/tomcat-webapps
+
+# Apache conf directory.
+# Windows equivalent would be something like C:/Program\ Files/Apache\ Group/Apache2/conf
+apache.conf.dir=/perfios/conf/apache-conf
+
+# Directory for deploying all website related files (HTML, CSS, JS and image files).
+# Windows equivalent would be something like C:/Program\ Files/Apache\ Group/Apache2/htdocs
+deploy.web.dir=/perfios/apache-htdocs
+
+# Perfios data directory.
+# Windows equivalent would be something like C:/perfios/data
+# ************************  WARNING  ************************************
+# This should be IDENTICAL to the value of tempFiles.rootDir property
+# set in your jserver.properties file.
+# ************************  WARNING  ************************************
+perfios.data.dir=/perfios/logs/ia-logs

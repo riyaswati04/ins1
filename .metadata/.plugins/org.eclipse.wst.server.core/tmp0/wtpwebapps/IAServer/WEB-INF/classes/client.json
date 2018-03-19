@@ -1,0 +1,13 @@
+{
+	"web": {
+		"client_id": "523523344083-cufphool7l8f4oqte7uje83jv7nf4tfi.apps.googleusercontent.com",
+		"project_id": "poised-charger-129306",
+		"auth_uri": "https://accounts.google.com/o/oauth2/auth",
+		"token_uri": "https://accounts.google.com/o/oauth2/token",
+		"auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+		"client_secret": "6is4YoJlWR65sLxJKeugwljB",
+		"redirect_uris": [
+			"https://www.perfios.com/redirect"
+		]
+	}
+}

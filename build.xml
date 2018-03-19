@@ -1,0 +1,530 @@
+<project name="InsightsAssist"
+         default="build"
+         basedir="."
+         xmlns:c="antlib:it.haefelinger.flaka">
+    <description>Build and deploy Insights Assist Server.</description>
+
+    <!-- Is a build environment specified? If not, set it to "local". -->
+    <condition property="build.env" value="${build.env}" else="local">
+        <isset property="build.env" />
+    </condition>
+
+    <!-- Assert build.${build.env}.properties is present unless this is a local build inside a container -->
+    <condition property="build.properties.exists">
+        <or>
+            <!-- build.properties for the selected build environment is present -->
+            <available file="${basedir}/build.${build.env}.properties" />
+
+            <!-- This is a local build running inside a container -->
+            <and>
+                <!-- Is local build -->
+                <equals arg1="local" arg2="${build.env}" />
+            </and>
+        </or>
+    </condition>
+    <fail unless="build.properties.exists"
+          message="File ${basedir}/build.${build.env}.properties is missing. Cannot build." />
+
+    <!-- Load the properties file for the chosen build environment followed by the
+        default properties. This is done because Ant properties are immutable: whoever sets
+        a property first controls the value.
+    -->
+    <property file="${basedir}/build.${build.env}.properties" />
+    <property file="${basedir}/build.default.properties" />
+
+    <!-- Define the Classpath.  Includes all JAR files under lib plus the generated class files. -->
+    <path id="classpath.build">
+        <fileset dir="${lib.dir}" includes="**/*.jar" />
+        <pathelement path="${build.java.classes.dir}" />
+    </path>
+
+    <!-- Contrib tasks for Ant -->
+    <taskdef resource="net/sf/antcontrib/antcontrib.properties">
+        <classpath location="${lib.dir}/ant/ant-contrib-0.6.jar" />
+    </taskdef>
+
+    <!-- Flaka extension for Ant -->
+    <taskdef uri="antlib:it.haefelinger.flaka"
+             resource="it/haefelinger/flaka/antlib.xml">
+        <classpath location="${lib.dir}/ant/ant-flaka-1.02.02.jar" />
+    </taskdef>
+
+    <!-- Load build Macros -->
+    <import file="${util.dir}/macros.xml" />
+
+    <!-- Define the paths of directories required for building -->
+    <path id="dirs.build">
+        <pathelement path="${build.dir}" />
+        <pathelement path="${build.files.static.dir}" />
+        <pathelement path="${build.java.dir}" />
+        <pathelement path="${build.java.classes.dir}" />
+        <pathelement path="${build.java.lib.dir}" />
+    </path>
+
+    <!-- Create the directory strucutre for building the sources. -->
+    <target name="init">
+        <tstamp />
+        <for param="directory">
+            <path refid="dirs.build" />
+            <sequential>
+                <mkdir dir="@{directory}" />
+                <mkdir dir="${perfios.data.dir}"/>
+                <mkdir dir="${dist.dir}" />
+            </sequential>
+        </for>
+    </target>
+
+    <!-- Sets a property to true if build.env == local -->
+    <target name="is.build.local">
+        <c:choose>
+            <when test="'${build.env}' eq 'local'">
+                <property name="is.build.local" value="true" />
+            </when>
+            <otherwise>
+                <property name="is.build.local" value="false" />
+            </otherwise>
+        </c:choose>
+    </target>
+
+    <!-- Compiles all Java sources including generated ones. -->
+    <target name="compile.java">
+        <javac includeantruntime="false"
+               debug="true"
+               srcdir="${source.java.dir}"
+               destdir="${build.java.classes.dir}"
+               classpathref="classpath.build"
+               fork="true"
+               memoryMaximumSize="1024m"
+               createMissingPackageInfoClass="false">
+            <compilerarg value="-proc:none" />
+            <!-- Do not compile unused source files. -->
+        </javac>
+    </target>
+
+    <!-- Build Java and files required for the Java part of the application. -->
+    <target name="build.java" depends="compile.java">
+        <!-- We've compiled the Java sources. Now we'll copy other files. -->
+        <!-- Copy web.xml and urlrewrite.xml. -->
+        <copy todir="${build.java.dir}">
+            <fileset dir="${source.java.dir}/com/ia/servlet">
+                <include name="web.xml" />
+                <include name="urlrewrite.xml" />
+                <include name="error*.html" />
+            </fileset>
+        </copy>
+
+        <!-- Copy required Libraries. -->
+        <copy todir="${build.java.lib.dir}">
+            <fileset dir="${lib.dir}">
+                <include name="*.jar" />
+                <exclude name="servlet-api.jar" />
+                <exclude name="tomcat/*" />
+                <exclude name="ant/*" />
+            </fileset>
+        </copy>
+
+        <!-- Copy property template and servers.xml files -->
+        <copy todir="${build.java.classes.dir}">
+            <fileset dir="${source.java.dir}">
+                <include name="**/*.properties" />
+                <include name="**/*.xml" />
+                <include name="**/*.jks" />
+                <include name="client.json" />
+                <include name="templates/*" />
+            </fileset>
+        </copy>
+
+    </target>
+
+    <!-- Copy all static files to apache-htdocs.  -->
+    <target name="build.files.static" depends="init">
+        <copy todir="${build.files.static.dir}">
+            <fileset dir="${source.static.files.dir}">
+                <exclude name="configuration.php.template" />
+            </fileset>
+        </copy>
+    </target>
+
+
+    <!-- Overwrite ia.properties with remote machine specific version if build.env != local -->
+    <target name="overwrite.ia.properties"
+            depends="init"
+            unless="${is.build.local}">
+        <echo message="Replacing ia.properties with ${util.deploy.dir}/ia.${build.env}.properties" />
+        <copy file="${util.deploy.dir}/ia.${build.env}.properties"
+              tofile="${build.java.classes.dir}/ia.properties"
+              overwrite="true" />
+    </target>
+
+    <!-- Overwrite servers.xml with remote machine specific version if build.env != local -->
+    <target name="overwrite.servers.xml"
+            depends="init"
+            unless="${is.build.local}">
+        <echo message="Replacing servers.xml with ${util.deploy.dir}/servers.${build.env}.xml" />
+        <copy file="${util.deploy.dir}/servers.${build.env}.xml"
+              tofile="${build.java.classes.dir}/servers.xml"
+              overwrite="true" />
+    </target>
+
+
+    <!-- PropertiesUtil is used to compare a .properties file against a template. Compile it alone. -->
+    <target name="compile.propertiesUtil" depends="init">
+        <javac includeantruntime="false"
+               debug="true"
+               srcdir="${source.java.dir}"
+               destdir="${build.java.classes.dir}"
+               classpathref="classpath.build"
+               createMissingPackageInfoClass="false">
+            <include name="com/ia/util/PropertiesUtil.java" />
+        </javac>
+    </target>
+
+    <!-- Fails if an appropriate ia.properties file cannot be found. -->
+    <target name="assert.ia.properties">
+        <!-- Decide which ia.properties to use based on build.env. -->
+        <if>
+            <equals arg1="${build.env}" arg2="local" />
+            <then>
+                <property name="path.ia.properties"
+                          value="${source.java.dir}/ia.properties" />
+            </then>
+            <else>
+                <property name="path.ia.properties"
+                          value="${util.deploy.dir}/ia.${build.env}.properties" />
+            </else>
+        </if>
+
+        <available file="${path.ia.properties}"
+                   property="ia.properties.exists" />
+        <fail unless="ia.properties.exists"
+              message="File ${path.ia.properties} is missing. Cannot build." />
+    </target>
+
+    <!-- Check if any expected properties are missing from the build-specific ia.properties file. -->
+    <target name="util.check.properties"
+            depends="is.build.local, compile.propertiesUtil, assert.ia.properties"
+            description="Check if any expected properties are missing from the build-specific ia.properties file.">
+        <echo message="Checking for missing props in ia.properties for build.env `${build.env}`." />
+
+        <java classname="com.ia.util.PropertiesUtil"
+              classpathref="classpath.build"
+              failonerror="true">
+            <arg value="${source.java.dir}/ia.properties.template" />
+            <arg value="${path.ia.properties}" />
+        </java>
+    </target>
+
+    <!-- For non-local builds only; build will fail if ia.properties doesn't contain all values mentioned in ia.properties.template -->
+    <target name="assert.all.ia.properties"
+            depends="is.build.local, util.check.properties"
+            unless="${is.build.local}" />
+
+    <!-- Get the git SHA1 ID -->
+    <target name="read.git.sha1">
+        <exec executable="git"
+              outputproperty="git.sha1"
+              failifexecutionfails="false"
+              errorproperty="">
+            <arg value="describe" />
+            <arg value="--tags" />
+            <arg value="--always" />
+            <arg value="HEAD" />
+        </exec>
+    </target>
+
+    <!-- Write the git SHA1 ID to a file -->
+    <target name="write.git.sha1">
+        <echo file="${build.java.classes.dir}/commit" message="${git.sha1}" />
+    </target>
+
+    <!-- Build Perfios. -->
+    <target name="build"
+            depends="init, is.build.local, build.java, build.files.static,overwrite.ia.properties, overwrite.servers.xml, assert.all.ia.properties, read.git.sha1"
+            description="Build the ia application suite.">
+        <antcall target="write.git.sha1" />
+    </target>
+
+    <!-- Define the paths of directories required for deploying -->
+    <path id="dirs.deploy">
+        <pathelement path="${deploy.java.dir}" />
+    </path>
+
+    <!-- Create the necessary directory strucutre for deploying. -->
+    <target name="init.deploy" depends="is.build.local" if="${is.build.local}">
+        <tstamp />
+        <!--for param="">
+            <path refid="dirs.deploy" />
+            <sequential>
+                <mkdir dir="@{directory}" />
+            </sequential>
+        </for-->
+    </target>
+
+    <!-- Loads required properties from ia.properties -->
+    <target name="load.required.ia.properties"
+            depends="assert.ia.properties">
+        <loadproperties srcFile="${path.ia.properties}">
+            <filterchain>
+                <linecontainsregexp>
+                    <regexp pattern="^(report\.templateDir|kubera\.db\.|log\.dir|tempFiles\.rootDir|enact\.files\.dir|doc\.fileserver\.rootdir)" />
+                </linecontainsregexp>
+            </filterchain>
+        </loadproperties>
+    </target>
+
+    <!-- Deploys all files required by the Java part of the application. -->
+    <target name="deploy.java"
+            depends="build.java, init.deploy, load.required.ia.properties, util.check.properties"
+            if="${is.build.local}">
+        <!-- Copy everything except report templates -->
+        <copy todir="${deploy.java.dir}">
+            <fileset dir="${build.java.dir}" />
+        </copy>
+
+    </target>
+
+    <!-- Deploys all static files of the application. -->
+    <target name="deploy.files.static"
+            depends="build.files.static,init.deploy"
+            if="${is.build.local}">
+        <!-- Copy everything except report templates -->
+        <copy todir="${deploy.web.dir}">
+            <fileset dir="${build.files.static.dir}" />
+        </copy>
+
+    </target>
+
+
+    <!-- For local deployment -->
+    <target name="deploy"
+            if="${is.build.local}"
+            depends="build, util.check.properties, deploy.java, deploy.files.static"
+            description="Deploy all applications to a local Tomcat server.">
+        <!-- Deploying involves the following steps:
+             (1) Create directory structure.
+             (2) Deploy Java (.class) and related files.
+             (3) Deploy static files to deploy directory (HTML, CSS, Javascript and image files).
+             (4) Create directories required for Perfios to run if not already present.
+          -->
+    </target>
+
+	<!--
+    ***************************************************************************
+    *    Source Code Generation: JOOQ
+    ***************************************************************************
+    -->
+    <!-- Sets a property if generated Insights (JOOQ) sources are out of date -->
+    <target name="uptodate.ia.generated.jooq">
+        <uptodate property="skip.generate.ia.jooq.sources"
+                  targetfile="${source.ia.jooq.dir}">
+            <srcfiles file="${source.ia.dir}/annotations/CodeGenerator.java" />
+            <srcfiles file="${source.db.dir}/create_schema.sql" />
+        </uptodate>
+    </target>
+
+    <!-- Generate Jooq sources Generator -->
+    <target name="compile.ia.codegenerator.jooq" depends="init">
+        <javac sourcepath=""
+               srcdir="${source.app.java.dir}"
+               destdir="${source.app.java.dir}"
+               debug="false"
+               includeantruntime="false"
+               classpathref="classpath.build">
+            <include name="com/ia/annotations/CodeGenerator.java" />
+        </javac>
+    </target>
+
+    <!-- Format generated code -->
+    <target name="format.ia.sources.jooq">
+        <exec executable="eclipse" dir="${project.dir}">
+            <arg line="-nosplash -verbose
+                       -application org.eclipse.jdt.core.JavaCodeFormatter
+                       -config ${util.dir}/org.eclipse.jdt.core.prefs
+                       ${source.ia.jooq.dir}" />
+        </exec>
+    </target>
+
+    <!-- Strip trailing spaces from generated code -->
+    <target name="strip.ia.sources.jooq">
+        <exec executable="bash" dir="${source.ia.jooq.dir}">
+            <arg value="-c" />
+            <arg value="find . -type f -name '*.java' | xargs sed -i 's/[ \t]*$//'" />
+        </exec>
+    </target>
+
+    <!-- Generates JOOQ sources -->
+    <target name="generate.ia.sources.jooq"
+            description="Generate Insights Assist sources using JOOQ"
+            depends="uptodate.ia.generated.jooq, compile.ia.codegenerator.jooq"
+            unless="${skip.generate.ia.jooq.sources}">
+        <java fork="true"
+              classname="com.ia.annotations.CodeGenerator"
+              classpathref="classpath.build"
+              dir="${source.app.java.dir}">
+            <arg value="ia.properties" />
+        </java>
+        <!--antcall target="format.ia.sources.jooq" /-->
+        <antcall target="strip.ia.sources.jooq" />
+    </target>
+
+    <!-- Delete compiled classes and necessary files from the build directory. -->
+    <target name="clean.java">
+        <delete includeemptydirs="true" failonerror="false">
+            <!-- Don't delete the scripts directory if present. -->
+            <fileset dir="${build.java.dir}" excludes="**/scripts/**" />
+        </delete>
+    </target>
+
+    <target name="clean"
+            depends="clean.java"
+            description="Delete everything built for the local machine.">
+        <for param="directory">
+            <path refid="dirs.build" />
+            <sequential>
+                <delete dir="@{directory}" />
+            </sequential>
+        </for>
+    </target>
+
+    <target name="clean.deployed"
+            description="Delete the locally deployed application.">
+        <for param="directory">
+            <path refid="dirs.deploy" />
+            <sequential>
+                <delete dir="@{directory}" />
+            </sequential>
+        </for>
+    </target>
+
+    <!-- Check that yes excutable is in PATH -->
+    <target name="assert.yes">
+        <assertAvailability executable="yes" />
+    </target>
+
+    <!-- Verify that Python excutable is in PATH -->
+    <target name="assert.python">
+        <assertAvailability executable="python" />
+    </target>
+
+    <target name="util.check.makefiles"
+            description="Check for missing Java file entries in Makefiles."
+            depends="assert.python">
+        <exec executable="python" dir="${project.dir}" failonerror="true">
+            <arg line="${util.dir}/bin/check_makefiles ${source.java.dir}" />
+        </exec>
+    </target>
+    
+    
+    <!--
+    ***************************************************************************
+    *    Dist Tasks: App
+    ***************************************************************************
+    -->
+    <!-- Creates a WAR file for Tomcat -->
+    <target name="dist.app.war">
+
+        <war destfile="${dist.dir}/IAServer.war"
+             webxml="${build.java.classes.dir}/com/ia/servlet/web.xml">
+
+            <!-- tomcat-webapps/IAServer/WEB-INF/lib -->
+            <lib dir="${lib.dir}">
+                <include name="*.jar" />
+                <exclude name="servlet-api.jar" />
+            </lib>
+
+            <!-- tomcat-webapps/IAServer/WEB-INF/classes -->
+            <classes dir="${build.java.classes.dir}">
+               <!-- <exclude name="kubera.properties" /> -->
+            </classes>
+
+            <!-- tomcat-webapps/IAServer/WEB-INF/* -->
+            <webinf dir="${build.java.classes.dir}/com/ia/servlet">
+                <include name="urlrewrite.xml" />
+                <include name="error*.html" />
+            </webinf>
+
+            <!-- tomcat-webapps/IAServer/META-INF/context.xml -->
+            <metainf dir="${build.java.classes.dir}/com/ia/servlet"
+                     includes="context.xml" />
+
+        </war>
+
+    </target>
+
+    <!-- Prepares app tier for distribution -->
+    <target name="dist.app" depends="dist.app.war">
+
+        <!-- Create tar.gz file with everything that is not
+             part of the WAR file -->
+        <tar destfile="${dist.dir}/app.tar.gz"
+             compression="gzip"
+             longfile="gnu">
+
+            <tarfileset dir="${build.dir}" prefix="/perfios">
+                <include name="htdocs/**" />
+                <include name="java/**" />
+            </tarfileset>
+
+        </tar>
+
+    </target>
+    
+    <!--
+    ***************************************************************************
+    *    Dist Tasks: Master
+    ***************************************************************************
+    -->
+    <target name="dist"
+            depends="build, dist.app"
+            description="Builds and packages the application for distribution" />
+
+    
+    <!--
+    Need to do this also.
+    ***************************************************************************
+    *    Dist Tasks: Db
+    ***************************************************************************
+   
+    <target name="dist.db.migrator.jar">
+
+         Java classes and their dependencies required to apply migrations 
+        <jar destfile="${build.db.dir}/perfios-database-migrator.jar">
+            <fileset dir="${build.app.java.dir}"
+                     includes="com/kubera/database/migration/*.class" />
+            <fileset dir="${build.app.java.dir}"
+                     includes="com/kubera/insights/util/SetOnce.class" />
+            <manifest>
+                <attribute name="Manifest-Version" value="1.0" />
+                <attribute name="Created-By"
+                           value="Perfios Software Solutions" />
+            </manifest>
+            <zipgroupfileset dir="${lib.dir}">
+                <include name="commons-cli-1.3.1.jar" />
+                <include name="commons-collections-3.2.1.jar" />
+                <include name="commons-io-1.4.jar" />
+                <include name="commons-lang-2.6.jar" />
+                <include name="gson-2.2.4.jar" />
+                <include name="guava-18.0.jar" />
+                <include name="hibernate-validator-4.3.0.Final.jar" />
+                <include name="jooq-3.5.0.jar" />
+                <include name="validation-api-1.0.0.GA.jar" />
+            </zipgroupfileset>
+            <zipgroupfileset dir="${lib.dir}/tomcat">
+                <include name="mysql-connector-java-5.1.13-bin.jar" />
+            </zipgroupfileset>
+        </jar>
+
+    </target>
+
+    <target name="dist.db" depends="dist.db.migrator.jar">
+
+        <tar destfile="${dist.dir}/db.tar.gz" compression="gzip" longfile="gnu">
+            <tarfileset dir="${build.db.dir}" prefix="/perfios/sql">
+                <include name="**/*" />
+            </tarfileset>
+        </tar>
+
+    </target>  
+     --> 
+
+</project>
